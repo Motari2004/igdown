@@ -1,20 +1,12 @@
 from fastapi import FastAPI, Form, Request, HTTPException
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 import subprocess
-import signal
-import sys
 import os
+import json
 
-app = FastAPI(title="TurboStream Render-Safe")
+app = FastAPI(title="TurboStream Pro")
 templates = Jinja2Templates(directory="templates")
-
-# Graceful exit for local Ctrl+C and Render SIGTERM
-def signal_handler(sig, frame):
-    sys.exit(0)
-
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -25,50 +17,37 @@ async def download(url: str = Form(...)):
     if not url.strip():
         raise HTTPException(status_code=400, detail="Invalid URL")
 
-    # OPTIMIZED FOR RENDER FREE TIER (512MB RAM)
-    # 1. height<=720: Prevents massive RAM usage during merging
-    # 2. -x 4: Limits parallel connections to reduce buffer memory
-    # 3. --buffer-size: Keeps aria2c memory footprint small
-    command = [
-        "yt-dlp",
-        "-f", "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-        "--downloader", "aria2c",
-        "--downloader-args", "aria2c:-x 4 -s 4 -k 1M --buffer-size=1M",
-        "-o", "-", 
-        "--no-playlist",
-        "--quiet",
-        "--no-part",
-        url
-    ]
+    try:
+        # We fetch the URL and the Title as JSON for accuracy
+        command = [
+            "yt-dlp",
+            "--quiet",
+            "--no-warnings",
+            "--no-playlist",
+            "-f", "best[ext=mp4]/best",
+            "--get-url",
+            url
+        ]
+        
+        # Run command
+        result = subprocess.run(command, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            raise Exception(result.stderr)
 
-    def iterfile():
-        # Use a smaller bufsize (64KB) to prevent memory spikes in the Python process
-        proc = subprocess.Popen(
-            command, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.DEVNULL,
-            bufsize=65536 
-        )
-        try:
-            while True:
-                chunk = proc.stdout.read(65536) 
-                if not chunk:
-                    break
-                yield chunk
-        finally:
-            # Clean up the subprocess to prevent 'Zombie' processes consuming RAM
-            proc.terminate()
-            try:
-                proc.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                proc.kill()
+        direct_url = result.stdout.strip()
 
-    return StreamingResponse(
-        iterfile(), 
-        media_type="video/mp4",
-        headers={
-            "Content-Disposition": 'attachment; filename="video.mp4"',
-            "Connection": "keep-alive",
-            "Cache-Control": "no-cache"
-        }
-    )
+        if not direct_url:
+            raise Exception("Could not extract stream URL")
+
+        # Redirect browser to the direct source (High Speed, 0 RAM usage)
+        return RedirectResponse(url=direct_url)
+
+    except Exception as e:
+        print(f"Extraction Error: {e}")
+        raise HTTPException(status_code=500, detail="Video unavailable or unsupported.")
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
