@@ -17,9 +17,9 @@ async def download(url: str = Form(...)):
     if not url.strip():
         raise HTTPException(status_code=400, detail="URL cannot be empty")
 
-    # This selection string looks for the best single file (video+audio) 
-    # to avoid "Format not available" errors.
-    format_selector = "best" 
+    # FIX: We tell yt-dlp to find the best COMBINED format (video+audio in one)
+    # 'b' is the shorthand for the best single-file format.
+    format_selector = "best[ext=mp4]/best" 
 
     command = [
         "yt-dlp",
@@ -32,33 +32,32 @@ async def download(url: str = Form(...)):
         "--get-url"
     ]
 
-    # Use cookies if the file exists
     if os.path.exists("cookies.txt"):
         command.extend(["--cookies", "cookies.txt"])
     
     command.append(url)
 
     try:
-        # Increase timeout to 30s because Render can be slow
         result = subprocess.run(command, capture_output=True, text=True, timeout=30)
         
+        # If 'best[ext=mp4]' fails, we try 'best' (which might be webm but will work)
+        if result.returncode != 0:
+            command[command.index("-f") + 1] = "best"
+            result = subprocess.run(command, capture_output=True, text=True, timeout=30)
+
         if result.returncode != 0:
             error_msg = result.stderr.lower()
             print(f"Extraction Error: {result.stderr}")
-            
             if "sign in" in error_msg:
-                raise Exception("YouTube blocked this request. Refresh your cookies.txt.")
-            elif "format is not available" in error_msg:
-                raise Exception("This specific quality isn't available. Try another video.")
+                raise Exception("YouTube blocked this request. Refresh cookies.txt.")
             else:
-                raise Exception("Could not extract video. YouTube might be throttling the server.")
+                raise Exception("Format unavailable or video restricted.")
 
         direct_url = result.stdout.strip()
         
         if not direct_url:
             raise Exception("No direct URL found.")
 
-        # Redirect the user's browser to the actual file
         return RedirectResponse(url=direct_url)
 
     except Exception as e:
