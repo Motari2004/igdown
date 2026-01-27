@@ -4,17 +4,17 @@ from fastapi.templating import Jinja2Templates
 import subprocess
 import signal
 import sys
-import shlex
+import os
 
-app = FastAPI(title="Turbo Stream Downloader")
+app = FastAPI(title="TurboStream Render-Safe")
 templates = Jinja2Templates(directory="templates")
 
-# Immediate exit on Ctrl+C for the server process
+# Graceful exit for local Ctrl+C and Render SIGTERM
 def signal_handler(sig, frame):
-    print("\nForce quitting server...")
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -25,46 +25,50 @@ async def download(url: str = Form(...)):
     if not url.strip():
         raise HTTPException(status_code=400, detail="Invalid URL")
 
-    # The Turbo Settings: 
-    # 1. --downloader aria2c: Parallel connection king
-    # 2. --downloader-args: Open 16 connections per server
+    # OPTIMIZED FOR RENDER FREE TIER (512MB RAM)
+    # 1. height<=720: Prevents massive RAM usage during merging
+    # 2. -x 4: Limits parallel connections to reduce buffer memory
+    # 3. --buffer-size: Keeps aria2c memory footprint small
     command = [
         "yt-dlp",
-        "-f", "best[ext=mp4]/best",
+        "-f", "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "--downloader", "aria2c",
-        "--downloader-args", "aria2c:-x 16 -s 16 -k 1M",
-        "-o", "-", # Stream to stdout
+        "--downloader-args", "aria2c:-x 4 -s 4 -k 1M --buffer-size=1M",
+        "-o", "-", 
         "--no-playlist",
         "--quiet",
-        "--no-part", # Don't use .part files, stream raw
+        "--no-part",
         url
     ]
 
     def iterfile():
-        # Start the process
+        # Use a smaller bufsize (64KB) to prevent memory spikes in the Python process
         proc = subprocess.Popen(
             command, 
             stdout=subprocess.PIPE, 
             stderr=subprocess.DEVNULL,
-            bufsize=1024*1024 # 1MB buffer for smoother streaming
+            bufsize=65536 
         )
         try:
             while True:
-                # Read in 128KB chunks for high-speed throughput
-                chunk = proc.stdout.read(1024 * 128)
+                chunk = proc.stdout.read(65536) 
                 if not chunk:
                     break
                 yield chunk
         finally:
-            # If the user cancels the download in browser, kill the process
+            # Clean up the subprocess to prevent 'Zombie' processes consuming RAM
             proc.terminate()
-            proc.wait()
+            try:
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                proc.kill()
 
     return StreamingResponse(
         iterfile(), 
         media_type="video/mp4",
         headers={
-            "Content-Disposition": 'attachment; filename="fast_video.mp4"',
-            "Connection": "keep-alive"
+            "Content-Disposition": 'attachment; filename="video.mp4"',
+            "Connection": "keep-alive",
+            "Cache-Control": "no-cache"
         }
     )
