@@ -17,17 +17,19 @@ async def download(url: str = Form(...)):
     if not url.strip():
         raise HTTPException(status_code=400, detail="URL cannot be empty")
 
-    # FIX: We tell yt-dlp to find the best COMBINED format (video+audio in one)
-    # 'b' is the shorthand for the best single-file format.
-    format_selector = "best[ext=mp4]/best" 
+    # This attempts to find a single file that works in a browser redirect
+    # We prioritize mp4 for compatibility
+    format_selector = "best[ext=mp4]/best"
 
     command = [
         "yt-dlp",
         "--quiet",
         "--no-warnings",
         "--no-playlist",
-        "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        "--extractor-args", "youtube:player_client=android,web",
+        # Use a very specific mobile user agent which is less likely to be blocked
+        "--user-agent", "Mozilla/5.0 (Android 14; Mobile; rv:128.0) Gecko/128.0 Firefox/128.0",
+        # These args help bypass the "Sign in" requirement
+        "--extractor-args", "youtube:player_client=ios,web;player_skip=configs,js",
         "-f", format_selector,
         "--get-url"
     ]
@@ -40,24 +42,23 @@ async def download(url: str = Form(...)):
     try:
         result = subprocess.run(command, capture_output=True, text=True, timeout=30)
         
-        # If 'best[ext=mp4]' fails, we try 'best' (which might be webm but will work)
-        if result.returncode != 0:
-            command[command.index("-f") + 1] = "best"
-            result = subprocess.run(command, capture_output=True, text=True, timeout=30)
-
         if result.returncode != 0:
             error_msg = result.stderr.lower()
             print(f"Extraction Error: {result.stderr}")
-            if "sign in" in error_msg:
-                raise Exception("YouTube blocked this request. Refresh cookies.txt.")
+            
+            # If blocked, try one last time without cookies but with a different client
+            if "sign in" in error_msg or "403" in error_msg:
+                command_alt = [
+                    "yt-dlp", "--quiet", "-f", "best", "--get-url",
+                    "--extractor-args", "youtube:player_client=mweb", url
+                ]
+                result = subprocess.run(command_alt, capture_output=True, text=True, timeout=30)
+                if result.returncode != 0:
+                    raise Exception("YouTube blocked this request. Refresh cookies.txt.")
             else:
-                raise Exception("Format unavailable or video restricted.")
+                raise Exception("This video is restricted or unavailable.")
 
         direct_url = result.stdout.strip()
-        
-        if not direct_url:
-            raise Exception("No direct URL found.")
-
         return RedirectResponse(url=direct_url)
 
     except Exception as e:
