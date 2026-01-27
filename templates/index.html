@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TurboStream | Private Downloader</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #ff0050;
+            --secondary: #00f2ea;
+            --bg: #0a0a0c;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        * { box-sizing: border-box; transition: all 0.3s ease; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(255, 0, 80, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 242, 234, 0.1) 0%, transparent 40%);
+            color: white;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 40px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-weight: 800;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        p.subtitle {
+            color: #888;
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 18px 25px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 20px rgba(0, 242, 234, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 18px;
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(45deg, var(--primary), #ff4d00);
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 10px 20px rgba(255, 0, 80, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(255, 0, 80, 0.4);
+        }
+
+        button:active { transform: translateY(0); }
+
+        /* Loading Animation */
+        .loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .btn-text.loading { display: none; }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 12px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(0, 242, 234, 0.1);
+            color: var(--secondary);
+            border-radius: 100px;
+            font-size: 10px;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="badge">TURBO ENGINE ENABLED</div>
+    <h1>TurboStream</h1>
+    <p class="subtitle">Private, high-speed media extraction.</p>
+    
+    <form id="downloadForm" action="/download" method="post">
+        <div class="input-group">
+            <input type="text" name="url" placeholder="Paste link (YouTube, TikTok, etc.)" required autofocus>
+        </div>
+        
+        <button type="submit" id="submitBtn">
+            <span class="loader" id="loader"></span>
+            <span class="btn-text" id="btnText">Initialize Stream</span>
+        </button>
+    </form>
+    
+    <div class="footer">
+        Handcrafted in Nairobi &bull; Personal Use Only
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById('downloadForm');
+    const btnText = document.getElementById('btnText');
+    const loader = document.getElementById('loader');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.onsubmit = function() {
+        btnText.innerText = "Pumping Data...";
+        loader.style.display = "block";
+        submitBtn.style.background = "#333";
+        submitBtn.style.cursor = "not-allowed";
+        
+        // Re-enable after 10 seconds in case user cancels
+        setTimeout(() => {
+            btnText.innerText = "Initialize Stream";
+            loader.style.display = "none";
+            submitBtn.style.background = "linear-gradient(45deg, var(--primary), #ff4d00)";
+            submitBtn.style.cursor = "pointer";
+        }, 10000);
+    };
+</script>
+
+</body>
+</html>
