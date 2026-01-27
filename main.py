@@ -17,52 +17,52 @@ async def download(url: str = Form(...)):
     if not url.strip():
         raise HTTPException(status_code=400, detail="URL cannot be empty")
 
-    # This attempts to find a single file that works in a browser redirect
-    # We prioritize mp4 for compatibility
+    # Prioritize MP4 and single-file streams for direct browser redirection
     format_selector = "best[ext=mp4]/best"
+
+    # We use multiple client types to bypass the "Sign in" requirement.
+    # 'tv' and 'web_embedded' are currently the most reliable for non-cookie sessions.
+    extractor_args = "youtube:player_client=tv,web_embedded;player_skip=configs,js"
 
     command = [
         "yt-dlp",
         "--quiet",
         "--no-warnings",
         "--no-playlist",
-        # Use a very specific mobile user agent which is less likely to be blocked
-        "--user-agent", "Mozilla/5.0 (Android 14; Mobile; rv:128.0) Gecko/128.0 Firefox/128.0",
-        # These args help bypass the "Sign in" requirement
-        "--extractor-args", "youtube:player_client=ios,web;player_skip=configs,js",
+        "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "--extractor-args", extractor_args,
         "-f", format_selector,
-        "--get-url"
+        "--get-url",
+        url
     ]
 
-    if os.path.exists("cookies.txt"):
-        command.extend(["--cookies", "cookies.txt"])
-    
-    command.append(url)
-
     try:
+        # Run with a 30s timeout
         result = subprocess.run(command, capture_output=True, text=True, timeout=30)
         
         if result.returncode != 0:
             error_msg = result.stderr.lower()
-            print(f"Extraction Error: {result.stderr}")
-            
-            # If blocked, try one last time without cookies but with a different client
+            # If the TV client fails, try the mobile web fallback
             if "sign in" in error_msg or "403" in error_msg:
-                command_alt = [
+                fallback_command = [
                     "yt-dlp", "--quiet", "-f", "best", "--get-url",
                     "--extractor-args", "youtube:player_client=mweb", url
                 ]
-                result = subprocess.run(command_alt, capture_output=True, text=True, timeout=30)
-                if result.returncode != 0:
-                    raise Exception("YouTube blocked this request. Refresh cookies.txt.")
-            else:
-                raise Exception("This video is restricted or unavailable.")
+                result = subprocess.run(fallback_command, capture_output=True, text=True, timeout=30)
+                
+            if result.returncode != 0:
+                raise Exception("YouTube is blocking this request. Try a different video or wait a few minutes.")
 
         direct_url = result.stdout.strip()
+        
+        # Security: ensure we actually got a URL back
+        if not direct_url.startswith("http"):
+            raise Exception("Failed to retrieve a valid stream URL.")
+
         return RedirectResponse(url=direct_url)
 
     except Exception as e:
-        print(f"Final Error Log: {str(e)}")
+        print(f"Server Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
