@@ -17,19 +17,21 @@ async def download(url: str = Form(...)):
     if not url.strip():
         raise HTTPException(status_code=400, detail="URL cannot be empty")
 
-    # Prioritize MP4 and single-file streams for direct browser redirection
+    # Format: best mp4 available for direct browser playback
     format_selector = "best[ext=mp4]/best"
 
-    # We use multiple client types to bypass the "Sign in" requirement.
-    # 'tv' and 'web_embedded' are currently the most reliable for non-cookie sessions.
-    extractor_args = "youtube:player_client=tv,web_embedded;player_skip=configs,js"
+    # STRATEGY: Use the Android Music client. 
+    # This is currently the most 'invisible' client for cloud IPs.
+    extractor_args = "youtube:player_client=android_music,android;player_skip=configs,js"
 
     command = [
         "yt-dlp",
         "--quiet",
         "--no-warnings",
         "--no-playlist",
-        "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "--no-check-certificate",
+        "--socket-timeout", "10",
+        "--referer", "https://www.youtube.com/",
         "--extractor-args", extractor_args,
         "-f", format_selector,
         "--get-url",
@@ -37,34 +39,40 @@ async def download(url: str = Form(...)):
     ]
 
     try:
-        # Run with a 30s timeout
-        result = subprocess.run(command, capture_output=True, text=True, timeout=30)
+        # Initial attempt with Mobile/Music clients
+        process = subprocess.run(command, capture_output=True, text=True, timeout=30)
         
-        if result.returncode != 0:
-            error_msg = result.stderr.lower()
-            # If the TV client fails, try the mobile web fallback
-            if "sign in" in error_msg or "403" in error_msg:
-                fallback_command = [
-                    "yt-dlp", "--quiet", "-f", "best", "--get-url",
-                    "--extractor-args", "youtube:player_client=mweb", url
-                ]
-                result = subprocess.run(fallback_command, capture_output=True, text=True, timeout=30)
-                
-            if result.returncode != 0:
-                raise Exception("YouTube is blocking this request. Try a different video or wait a few minutes.")
+        if process.returncode != 0:
+            error_msg = process.stderr.lower()
+            print(f"Primary Client Failed: {process.stderr}")
+            
+            # FALLBACK: If Android fails, try the TV client (last resort before block)
+            fallback_args = "youtube:player_client=tv,web_embedded"
+            fallback_command = [
+                "yt-dlp", "--quiet", "-f", format_selector, "--get-url",
+                "--extractor-args", fallback_args, url
+            ]
+            process = subprocess.run(fallback_command, capture_output=True, text=True, timeout=30)
+            
+            if process.returncode != 0:
+                # Direct message to user about IP throttling
+                raise Exception("YouTube has temporarily flagged this server's IP. Try again in a few minutes.")
 
-        direct_url = result.stdout.strip()
+        direct_url = process.stdout.strip()
         
-        # Security: ensure we actually got a URL back
         if not direct_url.startswith("http"):
-            raise Exception("Failed to retrieve a valid stream URL.")
+            raise Exception("No valid stream URL found.")
 
+        # Redirect the user to the direct video stream
         return RedirectResponse(url=direct_url)
 
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Request timed out. YouTube is taking too long to respond.")
     except Exception as e:
-        print(f"Server Error: {str(e)}")
+        print(f"Log: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
+    # Render provides the PORT environment variable
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
