@@ -1,15 +1,15 @@
 # 🦂 SCORPIO | High-Performance IG Extraction Engine
 
-**Scorpio** is a professional-grade Instagram video downloader built on the **Quart** (Asynchronous Flask) framework and powered by **yt-dlp**. It features a high-end "Cyber-Ops" aesthetic, glassmorphic UI, and a resilient backend designed for cloud deployment.
+**Scorpio** is a professional-grade Instagram video extraction tool built on the **Quart** (Asynchronous Flask) framework and powered by **yt-dlp**. It features a high-end "Cyber-Ops" aesthetic, glassmorphic UI, and a resilient backend designed for cloud deployment.
 
 
 
 ## ⚡ Core Features
-* **Asynchronous Streaming:** Leverages `Quart` and `httpx` for non-blocking, chunked video delivery (1MB chunks).
+* **Asynchronous Streaming:** Leverages `Quart` and `httpx` for non-blocking, chunked video delivery (1MB chunks) to handle high-traffic extraction.
 * **Anti-Sleep Engine:** Integrated background heartbeat task that pings the system every 10 minutes to prevent Render/Cloud idling.
-* **Professional UI:** A futuristic glassmorphic interface featuring a 3-second "System Shake" recalibration effect on every page load.
+* **Recalibration UI:** A futuristic glassmorphic interface featuring a **3-second "System Shake"** recalibration effect on every page load.
 * **Session Persistence:** Supports `instagram_cookies.txt` via environment variables to bypass rate limits and private content restrictions.
-* **Auto-Reset Logic:** A strict 6-second cooldown cycle from execution to page reload, ensuring a fresh state for batch processing.
+* **Auto-Reset Logic:** A strict **6-second hard-reload cycle** from the moment of execution, ensuring the engine resets to an "Optimized" state for batch processing.
 
 ---
 
@@ -28,13 +28,13 @@ To keep your instance alive and authenticated, set the following in your hosting
 | Variable | Description | Default |
 | :--- | :--- | :--- |
 | `PORT` | The port the server binds to | `5000` |
-| `COOKIES_CONTENT` | The raw text content of your exported cookies file | `None` |
+| `COOKIES_CONTENT` | The raw text content of your exported Netscape cookies | `None` |
 | `PUBLIC_URL` | Your live deployment URL (required for Heartbeat) | `Render URL` |
 
 ### 2. Cookie Configuration
-Scorpio requires Instagram cookies to maintain a high "Fidelity" extraction rate.
-1. Export your cookies in Netscape format.
-2. Paste the content into the `COOKIES_CONTENT` environment variable.
+Scorpio requires Instagram cookies to maintain high-fidelity extraction.
+1. Export your cookies in **Netscape** format.
+2. Paste the raw content into the `COOKIES_CONTENT` environment variable.
 3. The engine will automatically generate `instagram_cookies.txt` on boot.
 
 ### 3. Local Installation
