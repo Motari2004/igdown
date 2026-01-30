@@ -11,19 +11,20 @@ import httpx
 # -----------------------------
 # Configuration & Environment
 # -----------------------------
-# Checks if running on Render; otherwise defaults to port 5000 for local dev
 IS_RENDER = "RENDER" in os.environ
 PORT = int(os.environ.get("PORT", 5000))
 CHUNK_SIZE = 1 * 1024 * 1024  # 1 MB
 COOKIE_FILE = "instagram_cookies.txt"
 
-# Securely reconstruct cookies from Environment Variable if provided (Render/Docker)
 COOKIES_CONTENT = os.environ.get("COOKIES_CONTENT")
 if COOKIES_CONTENT:
     with open(COOKIE_FILE, "w") as f:
         f.write(COOKIES_CONTENT)
 
 app = Quart(__name__)
+
+# This tells Quart to reload if index.html or other templates change
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,6 +42,7 @@ async def extract_instagram_info(url: str) -> dict:
         "quiet": True,
         "no_warnings": True,
         "cookiefile": COOKIE_FILE if os.path.exists(COOKIE_FILE) else None,
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
 
     def extract():
@@ -51,7 +53,6 @@ async def extract_instagram_info(url: str) -> dict:
             return info
 
     info = await asyncio.to_thread(extract)
-
     return {
         "video_url": info["url"],
         "headers": info.get("http_headers", {}),
@@ -62,16 +63,15 @@ async def extract_instagram_info(url: str) -> dict:
 # Range Streamer Logic
 # -----------------------------
 async def range_stream(video_url: str, base_headers: dict):
-    timeout = httpx.Timeout(connect=20.0, read=300.0, write=20.0, pool=20.0)
-    limits = httpx.Limits(max_connections=5, max_keepalive_connections=5)
+    timeout = httpx.Timeout(connect=20.0, read=None, write=20.0, pool=20.0)
+    limits = httpx.Limits(max_connections=10, max_keepalive_connections=5)
 
     async with httpx.AsyncClient(timeout=timeout, limits=limits, follow_redirects=True) as client:
-        # Get total size from the source
         try:
             head = await client.head(video_url, headers=base_headers)
             total_size = int(head.headers.get("Content-Length", 0))
-        except:
-            total_size = 0 # Fallback for sources hidden behind proxy
+        except Exception:
+            total_size = 0 
 
         start = 0
         while True:
@@ -85,59 +85,58 @@ async def range_stream(video_url: str, base_headers: dict):
                 "Connection": "keep-alive",
             }
 
-            async with client.stream("GET", video_url, headers=headers) as r:
-                # If we get a 416, we've reached the end of the stream
-                if r.status_code == 416:
-                    break
-                r.raise_for_status()
-                async for chunk in r.aiter_bytes():
-                    if chunk:
-                        yield chunk
+            try:
+                async with client.stream("GET", video_url, headers=headers) as r:
+                    if r.status_code == 416:
+                        break
+                    r.raise_for_status()
+                    async for chunk in r.aiter_bytes():
+                        if chunk: yield chunk
+            except Exception:
+                break
 
             if total_size and end >= total_size - 1:
                 break
-                
             start = end + 1
-            await asyncio.sleep(0) 
+            await asyncio.sleep(0)
 
 # -----------------------------
 # Routes
 # -----------------------------
 @app.route("/")
 async def index():
-    # Serves the premium index.html from /templates
     return await render_template("index.html")
 
 @app.route("/download", methods=["POST"])
 async def download():
     form = await request.form
     url = form.get("url")
-
-    if not url:
-        return "❌ No URL provided", 400
+    if not url: return "❌ No URL provided", 400
 
     try:
         info = await extract_instagram_info(url)
-
         return Response(
             range_stream(info["video_url"], info["headers"]),
             headers={
                 "Content-Disposition": f"attachment; filename*=UTF-8''{info['filename']}",
                 "Content-Type": "video/mp4",
                 "Accept-Ranges": "bytes",
-                "Cache-Control": "no-store",
-                "X-Content-Type-Options": "nosniff",
             }
         )
-
     except Exception as e:
-        logger.exception("Download error")
-        return f"❌ Error: {str(e)}", 500
+        logger.exception("Extraction failed")
+        return f"❌ Scorpio Error: {str(e)}", 500
 
 # -----------------------------
-# Local Execution Entry Point
+# Local Execution with Hot Reload
 # -----------------------------
 if __name__ == "__main__":
-    # This block only runs when you execute 'python app.py'
-    logger.info(f"Starting Scorpio Local Dev Server on http://0.0.0.0:{PORT}")
-    app.run(host="0.0.0.0", port=PORT, debug=True)
+    logger.info("--- SCORPIO LOCAL DEV MODE (Hot Reload Active) ---")
+    # debug=True handles code changes
+    # use_reloader=True ensures the process restarts on save
+    app.run(
+        host="0.0.0.0", 
+        port=PORT, 
+        debug=True, 
+        use_reloader=True
+    )

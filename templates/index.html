@@ -3,109 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scorpio | Professional IG Downloader</title>
+    <title>Scorpio | High-Fidelity Extraction</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0a0a0c; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #08080a; }
         
         .glass-card {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.7);
         }
 
         .premium-glow {
             position: absolute;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(0, 0, 0, 0) 70%);
             z-index: -1;
-            filter: blur(60px);
+            filter: blur(80px);
         }
 
         .btn-gradient {
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .btn-gradient:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.5);
-            filter: brightness(1.1);
+        /* Success State for Button */
+        .btn-success {
+            background: #10b981 !important;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
         }
 
         @keyframes scan {
             0% { transform: translateY(-100%); opacity: 0; }
-            50% { opacity: 0.5; }
+            50% { opacity: 1; }
             100% { transform: translateY(100%); opacity: 0; }
         }
         .scan-line {
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #6366f1, transparent);
-            animation: scan 2s linear infinite;
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(to bottom, transparent, rgba(99, 102, 241, 0.08), transparent);
+            position: absolute;
+            animation: scan 1.5s ease-in-out infinite;
+        }
+
+        .success-checkmark {
+            display: none;
+            color: white;
+            animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes scaleIn { 
+            from { transform: scale(0) rotate(-20deg); opacity: 0; } 
+            to { transform: scale(1.1) rotate(0deg); opacity: 1; } 
         }
     </style>
 </head>
-<body class="text-slate-200 min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+<body class="text-slate-300 min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
 
-    <div class="premium-glow top-0 left-1/4"></div>
-    <div class="premium-glow bottom-0 right-1/4" style="background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(0, 0, 0, 0) 70%);"></div>
+    <div class="premium-glow -top-20 -left-20"></div>
+    <div class="premium-glow -bottom-20 -right-20" style="background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, rgba(0, 0, 0, 0) 70%);"></div>
 
     <main class="w-full max-w-xl z-10">
-        <div class="text-center mb-12">
-            <div class="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full bg-white/5 border border-white/10">
-                <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                <span class="text-[10px] uppercase tracking-widest font-bold text-slate-400">v2.0 Private Access</span>
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center gap-2 mb-4 px-4 py-1.5 rounded-full bg-white/5 border border-white/10">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1] animate-pulse"></span>
+                <span class="text-[9px] uppercase tracking-[0.25em] font-black text-slate-400">System v2.5 Online</span>
             </div>
-            <h1 class="text-5xl font-extrabold text-white tracking-tighter mb-3">SCORPIO</h1>
-            <p class="text-slate-500 text-lg">High-fidelity media extraction proxy.</p>
+            <h1 class="text-6xl font-black text-white tracking-tighter mb-2">SCORPIO</h1>
+            <p class="text-slate-500 font-medium tracking-wide">High-Performance Content Extraction Engine</p>
         </div>
 
-        <div class="glass-card rounded-[2.5rem] p-10 relative overflow-hidden">
+        <div class="glass-card rounded-[2.5rem] p-10 relative overflow-hidden" id="mainCard">
             <div id="scanLine" class="absolute inset-0 pointer-events-none hidden">
                 <div class="scan-line"></div>
             </div>
 
             <form id="dlForm" action="/download" method="POST" class="space-y-8">
                 <div class="relative group">
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1">Instagram URL</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 ml-1">Media Stream URL</label>
                     <input type="url" name="url" id="urlInput" required 
-                        placeholder="https://www.instagram.com/reels/..." 
-                        class="w-full px-6 py-5 rounded-2xl bg-black/40 border border-white/5 focus:border-indigo-500/50 focus:ring-0 transition-all text-white placeholder:text-slate-700">
+                        placeholder="Paste Instagram link..." 
+                        class="w-full px-6 py-5 rounded-2xl bg-black/50 border border-white/5 focus:border-indigo-500/40 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none transition-all text-white placeholder:text-slate-700">
                 </div>
 
-                <button type="submit" id="submitBtn" class="w-full btn-gradient text-white font-bold py-5 px-8 rounded-2xl flex items-center justify-center gap-3">
-                    <span id="btnText">Begin Secure Fetch</span>
-                    <svg id="btnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                <button type="submit" id="submitBtn" class="w-full btn-gradient text-white font-extrabold py-5 px-8 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300">
+                    <span id="btnText">EXECUTE FETCH</span>
+                    <div id="successCheck" class="success-checkmark">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
                 </button>
             </form>
 
-            <div id="loading" class="hidden mt-10 space-y-4">
-                <div class="flex justify-between items-center text-sm mb-2">
-                    <span class="text-indigo-400 font-semibold uppercase tracking-wider text-[10px]">Processing Pipeline</span>
-                    <span id="percent" class="text-slate-500 tabular-nums">0%</span>
+            <div id="loading" class="hidden mt-10">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-indigo-400 font-bold uppercase tracking-widest text-[10px]">Processing Pipeline</span>
+                    <span id="percent" class="text-slate-500 text-xs tabular-nums">0%</span>
                 </div>
-                <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div id="progressBar" class="h-full bg-indigo-500 w-0 transition-all duration-500 ease-out shadow-[0_0_15px_rgba(99,102,241,0.5)]"></div>
+                <div class="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div id="progressBar" class="h-full bg-indigo-500 w-0 transition-all duration-300 ease-out shadow-[0_0_15px_rgba(99,102,241,0.6)]"></div>
                 </div>
-                <p class="text-center text-slate-500 text-xs">Connecting to edge nodes... bypass in progress.</p>
             </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-4 mt-8">
-            <div class="glass-card rounded-2xl p-4 text-center">
-                <p class="text-[10px] text-slate-500 uppercase font-bold">Latency</p>
-                <p class="text-sm font-bold text-white">42ms</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+            <div class="glass-card rounded-2xl p-5 border-t border-white/5">
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-indigo-400 font-black tracking-[0.2em] uppercase mb-2">Architecture</span>
+                    <span class="text-sm font-bold text-white">EXTRACTION-V2</span>
+                    <p id="engineStatus" class="text-[10px] text-slate-500 mt-1 uppercase tracking-tighter">Status: Optimized</p>
+                </div>
             </div>
-            <div class="glass-card rounded-2xl p-4 text-center">
-                <p class="text-[10px] text-slate-500 uppercase font-bold">Format</p>
-                <p class="text-sm font-bold text-white">4K / MP4</p>
+            <div class="glass-card rounded-2xl p-5 border-t border-white/5">
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-indigo-400 font-black tracking-[0.2em] uppercase mb-2">Node</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-white">EDGE-GLOBAL</span>
+                        <span class="flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                    </div>
+                </div>
             </div>
-            <div class="glass-card rounded-2xl p-4 text-center">
-                <p class="text-[10px] text-slate-500 uppercase font-bold">Secure</p>
-                <p class="text-sm font-bold text-white">SSL</p>
+            <div class="glass-card rounded-2xl p-5 border-t border-white/5">
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-indigo-400 font-black tracking-[0.2em] uppercase mb-2">Fidelity</span>
+                    <span class="text-sm font-bold text-white">4K / MAX</span>
+                    <p class="text-[10px] text-slate-500 mt-1 uppercase tracking-tighter">Source: Original</p>
+                </div>
             </div>
         </div>
     </main>
@@ -113,39 +143,58 @@
     <script>
         const form = document.getElementById('dlForm');
         const btn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const successCheck = document.getElementById('successCheck');
         const loader = document.getElementById('loading');
         const progressBar = document.getElementById('progressBar');
         const scanLine = document.getElementById('scanLine');
         const percentText = document.getElementById('percent');
+        const engineStatus = document.getElementById('engineStatus');
+        const input = document.getElementById('urlInput');
 
         form.onsubmit = () => {
             btn.disabled = true;
-            btn.style.opacity = '0.5';
             loader.classList.remove('hidden');
             scanLine.classList.remove('hidden');
+            btnText.innerText = "EXTRACTING...";
+            engineStatus.innerText = "Status: Active";
+            engineStatus.classList.add('text-indigo-400');
             
             let progress = 0;
             const interval = setInterval(() => {
-                progress += Math.random() * 15;
+                progress += Math.random() * 35;
                 if (progress > 98) progress = 98;
                 progressBar.style.width = progress + '%';
                 percentText.innerText = Math.round(progress) + '%';
-            }, 600);
+            }, 250);
 
-            // Hide after 12s (assuming download started)
+            // Snappy 3-second completion
             setTimeout(() => {
                 clearInterval(interval);
                 progressBar.style.width = '100%';
                 percentText.innerText = '100%';
+                
+                // Switch to Success Tick for 2 seconds
+                btnText.style.display = 'none';
+                successCheck.style.display = 'block';
+                btn.classList.add('btn-success');
+                engineStatus.innerText = "Status: Completed";
+
                 setTimeout(() => {
+                    // Reset UI back to normal after 2 seconds of the tick
                     loader.classList.add('hidden');
                     scanLine.classList.add('hidden');
                     btn.disabled = false;
-                    btn.style.opacity = '1';
-                    progress = 0;
+                    btn.classList.remove('btn-success');
+                    btnText.style.display = 'block';
+                    btnText.innerText = "EXECUTE FETCH";
+                    successCheck.style.display = 'none';
+                    engineStatus.innerText = "Status: Optimized";
+                    engineStatus.classList.remove('text-indigo-400');
+                    input.value = '';
                     progressBar.style.width = '0%';
-                }, 1000);
-            }, 12000);
+                }, 2000); // The 2-second "Tick" appearance
+            }, 3000); // The 3-second "Snappy" processing
         };
     </script>
 </body>
