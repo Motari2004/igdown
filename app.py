@@ -13,6 +13,8 @@ import httpx
 # -----------------------------
 IS_RENDER = "RENDER" in os.environ
 PORT = int(os.environ.get("PORT", 5000))
+# Localhost ping for internal stay-awake logic
+SELF_URL = f"http://127.0.0.1:{PORT}/health" 
 CHUNK_SIZE = 1 * 1024 * 1024  # 1 MB
 COOKIE_FILE = "instagram_cookies.txt"
 
@@ -22,8 +24,6 @@ if COOKIES_CONTENT:
         f.write(COOKIES_CONTENT)
 
 app = Quart(__name__)
-
-# This tells Quart to reload if index.html or other templates change
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 logging.basicConfig(
@@ -34,7 +34,42 @@ logging.basicConfig(
 logger = logging.getLogger("Scorpio-DL")
 
 # -----------------------------
-# yt-dlp Extractor
+# Anti-Sleep Engine (5 Min Ping)
+# -----------------------------
+async def keep_alive():
+    """Background task to ping the server every 5 minutes to prevent Render sleep."""
+    await asyncio.sleep(10) # Initial boot delay
+    async with httpx.AsyncClient() as client:
+        while True:
+            try:
+                response = await client.get(SELF_URL)
+                # Success log
+                logger.info(f"❤️ SYSTEM HEARTBEAT: [Status {response.status_code}] Engine Active")
+            except Exception as e:
+                logger.warning(f"💔 HEARTBEAT INTERRUPTION: {e}")
+            
+            # 300 seconds = 5 minutes
+            await asyncio.sleep(300) 
+
+@app.before_serving
+async def startup_tasks():
+    # Launches the keep_alive loop in the background on startup
+    app.add_background_task(keep_alive)
+
+# -----------------------------
+# Routes
+# -----------------------------
+@app.route("/health")
+async def health():
+    """Silent endpoint for keep-alive pings."""
+    return {"status": "optimized", "engine": "scorpio-v2.5"}, 200
+
+@app.route("/")
+async def index():
+    return await render_template("index.html")
+
+# -----------------------------
+# yt-dlp & Streamer Logic
 # -----------------------------
 async def extract_instagram_info(url: str) -> dict:
     ydl_opts = {
@@ -59,14 +94,9 @@ async def extract_instagram_info(url: str) -> dict:
         "filename": quote(f"{info.get('title', 'scorpio_video')}.mp4")
     }
 
-# -----------------------------
-# Range Streamer Logic
-# -----------------------------
 async def range_stream(video_url: str, base_headers: dict):
     timeout = httpx.Timeout(connect=20.0, read=None, write=20.0, pool=20.0)
-    limits = httpx.Limits(max_connections=10, max_keepalive_connections=5)
-
-    async with httpx.AsyncClient(timeout=timeout, limits=limits, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
         try:
             head = await client.head(video_url, headers=base_headers)
             total_size = int(head.headers.get("Content-Length", 0))
@@ -76,43 +106,27 @@ async def range_stream(video_url: str, base_headers: dict):
         start = 0
         while True:
             end = start + CHUNK_SIZE - 1
-            if total_size and end >= total_size:
-                end = total_size - 1
-
-            headers = {
-                **base_headers,
-                "Range": f"bytes={start}-{end}",
-                "Connection": "keep-alive",
-            }
+            if total_size and end >= total_size: end = total_size - 1
+            headers = {**base_headers, "Range": f"bytes={start}-{end}", "Connection": "keep-alive"}
 
             try:
                 async with client.stream("GET", video_url, headers=headers) as r:
-                    if r.status_code == 416:
-                        break
+                    if r.status_code == 416: break
                     r.raise_for_status()
                     async for chunk in r.aiter_bytes():
                         if chunk: yield chunk
             except Exception:
                 break
 
-            if total_size and end >= total_size - 1:
-                break
+            if total_size and end >= total_size - 1: break
             start = end + 1
             await asyncio.sleep(0)
-
-# -----------------------------
-# Routes
-# -----------------------------
-@app.route("/")
-async def index():
-    return await render_template("index.html")
 
 @app.route("/download", methods=["POST"])
 async def download():
     form = await request.form
     url = form.get("url")
     if not url: return "❌ No URL provided", 400
-
     try:
         info = await extract_instagram_info(url)
         return Response(
@@ -128,15 +142,8 @@ async def download():
         return f"❌ Scorpio Error: {str(e)}", 500
 
 # -----------------------------
-# Local Execution with Hot Reload
+# Local Execution
 # -----------------------------
 if __name__ == "__main__":
-    logger.info("--- SCORPIO LOCAL DEV MODE (Hot Reload Active) ---")
-    # debug=True handles code changes
-    # use_reloader=True ensures the process restarts on save
-    app.run(
-        host="0.0.0.0", 
-        port=PORT, 
-        debug=True, 
-        use_reloader=True
-    )
+    logger.info("--- SCORPIO LOCAL DEV MODE ---")
+    app.run(host="0.0.0.0", port=PORT, debug=True, use_reloader=True)
