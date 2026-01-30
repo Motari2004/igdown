@@ -3,53 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamProxy Downloader</title>
+    <title>Scorpio | Professional IG Downloader</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        .loader { border-top-color: #3b82f6; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0a0a0c; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .premium-glow {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+            z-index: -1;
+            filter: blur(60px);
+        }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.5);
+            filter: brightness(1.1);
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(-100%); opacity: 0; }
+            50% { opacity: 0.5; }
+            100% { transform: translateY(100%); opacity: 0; }
+        }
+        .scan-line {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #6366f1, transparent);
+            animation: scan 2s linear infinite;
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+<body class="text-slate-200 min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
 
-    <div class="w-full max-w-md bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-extrabold text-white mb-2">Video DL <span class="text-blue-500">Pro</span></h1>
-            <p class="text-slate-400 text-sm">Supports YouTube, Instagram, and more</p>
+    <div class="premium-glow top-0 left-1/4"></div>
+    <div class="premium-glow bottom-0 right-1/4" style="background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(0, 0, 0, 0) 70%);"></div>
+
+    <main class="w-full max-w-xl z-10">
+        <div class="text-center mb-12">
+            <div class="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                <span class="text-[10px] uppercase tracking-widest font-bold text-slate-400">v2.0 Private Access</span>
+            </div>
+            <h1 class="text-5xl font-extrabold text-white tracking-tighter mb-3">SCORPIO</h1>
+            <p class="text-slate-500 text-lg">High-fidelity media extraction proxy.</p>
         </div>
 
-        <form id="dlForm" action="/download" method="POST" class="space-y-6">
-            <div>
-                <input type="url" name="url" required 
-                    placeholder="https://..." 
-                    class="w-full px-4 py-3 rounded-lg bg-slate-700 border border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
+        <div class="glass-card rounded-[2.5rem] p-10 relative overflow-hidden">
+            <div id="scanLine" class="absolute inset-0 pointer-events-none hidden">
+                <div class="scan-line"></div>
             </div>
 
-            <button type="submit" id="submitBtn" 
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 transform active:scale-95">
-                Start Download
-            </button>
-        </form>
+            <form id="dlForm" action="/download" method="POST" class="space-y-8">
+                <div class="relative group">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1">Instagram URL</label>
+                    <input type="url" name="url" id="urlInput" required 
+                        placeholder="https://www.instagram.com/reels/..." 
+                        class="w-full px-6 py-5 rounded-2xl bg-black/40 border border-white/5 focus:border-indigo-500/50 focus:ring-0 transition-all text-white placeholder:text-slate-700">
+                </div>
 
-        <div id="loading" class="hidden mt-8 text-center animate-pulse">
-            <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-600 h-10 w-10 mx-auto mb-4"></div>
-            <p class="text-blue-400 font-medium text-sm">Waking up the server...<br><span class="text-slate-500 font-normal">Your download will start automatically.</span></p>
+                <button type="submit" id="submitBtn" class="w-full btn-gradient text-white font-bold py-5 px-8 rounded-2xl flex items-center justify-center gap-3">
+                    <span id="btnText">Begin Secure Fetch</span>
+                    <svg id="btnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+            </form>
+
+            <div id="loading" class="hidden mt-10 space-y-4">
+                <div class="flex justify-between items-center text-sm mb-2">
+                    <span class="text-indigo-400 font-semibold uppercase tracking-wider text-[10px]">Processing Pipeline</span>
+                    <span id="percent" class="text-slate-500 tabular-nums">0%</span>
+                </div>
+                <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div id="progressBar" class="h-full bg-indigo-500 w-0 transition-all duration-500 ease-out shadow-[0_0_15px_rgba(99,102,241,0.5)]"></div>
+                </div>
+                <p class="text-center text-slate-500 text-xs">Connecting to edge nodes... bypass in progress.</p>
+            </div>
         </div>
-    </div>
+
+        <div class="grid grid-cols-3 gap-4 mt-8">
+            <div class="glass-card rounded-2xl p-4 text-center">
+                <p class="text-[10px] text-slate-500 uppercase font-bold">Latency</p>
+                <p class="text-sm font-bold text-white">42ms</p>
+            </div>
+            <div class="glass-card rounded-2xl p-4 text-center">
+                <p class="text-[10px] text-slate-500 uppercase font-bold">Format</p>
+                <p class="text-sm font-bold text-white">4K / MP4</p>
+            </div>
+            <div class="glass-card rounded-2xl p-4 text-center">
+                <p class="text-[10px] text-slate-500 uppercase font-bold">Secure</p>
+                <p class="text-sm font-bold text-white">SSL</p>
+            </div>
+        </div>
+    </main>
 
     <script>
         const form = document.getElementById('dlForm');
         const btn = document.getElementById('submitBtn');
         const loader = document.getElementById('loading');
+        const progressBar = document.getElementById('progressBar');
+        const scanLine = document.getElementById('scanLine');
+        const percentText = document.getElementById('percent');
 
         form.onsubmit = () => {
-            btn.classList.add('hidden');
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
             loader.classList.remove('hidden');
-            // Allow user to try again if download fails to trigger browser save dialog
+            scanLine.classList.remove('hidden');
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 98) progress = 98;
+                progressBar.style.width = progress + '%';
+                percentText.innerText = Math.round(progress) + '%';
+            }, 600);
+
+            // Hide after 12s (assuming download started)
             setTimeout(() => {
-                btn.classList.remove('hidden');
-                loader.classList.add('hidden');
-            }, 8000);
+                clearInterval(interval);
+                progressBar.style.width = '100%';
+                percentText.innerText = '100%';
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                    scanLine.classList.add('hidden');
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    progress = 0;
+                    progressBar.style.width = '0%';
+                }, 1000);
+            }, 12000);
         };
     </script>
 </body>
