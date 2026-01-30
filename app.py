@@ -36,7 +36,6 @@ async def extract_instagram_info(url: str) -> dict:
         "format": "best",
         "quiet": True,
         "no_warnings": True,
-        # Allow use of cookies if the file exists
         "cookiefile": COOKIE_FILE if os.path.exists(COOKIE_FILE) else None,
     }
 
@@ -47,7 +46,7 @@ async def extract_instagram_info(url: str) -> dict:
                 raise ValueError("Unable to extract video URL")
             return info
 
-    # Run blocking yt-dlp call in a thread to keep the loop free
+    # Keep the event loop responsive during extraction
     info = await asyncio.to_thread(extract)
 
     return {
@@ -64,7 +63,6 @@ async def range_stream(video_url: str, base_headers: dict):
     limits = httpx.Limits(max_connections=5, max_keepalive_connections=5)
 
     async with httpx.AsyncClient(timeout=timeout, limits=limits, follow_redirects=True) as client:
-        # Get total size from the source
         head = await client.head(video_url, headers=base_headers)
         total_size = int(head.headers.get("Content-Length", 0))
         
@@ -84,16 +82,15 @@ async def range_stream(video_url: str, base_headers: dict):
                         yield chunk
 
             start = end + 1
-            await asyncio.sleep(0)  # Yield control to the event loop
+            await asyncio.sleep(0) 
 
 # -----------------------------
 # Routes
 # -----------------------------
 @app.route("/")
 async def index():
-    # Ensure you have an index.html in a /templates folder
-    # Or just return a simple string for testing:
-    return "IG Streamer Docker Instance is Live."
+    # Now correctly serving your index.html
+    return await render_template("index.html")
 
 @app.route("/download", methods=["POST"])
 async def download():
