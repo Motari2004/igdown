@@ -48,7 +48,7 @@ Copy and execute the following commands in your terminal:
 
 ```bash
 # Clone the repository
-git clone [https://github.com/Motari2004/igdown](https://github.com/Motari2004/igdown)
+git clone https://github.com/Motari2004/igdown
 
 # Enter the system directory
 cd igdown
