@@ -92,7 +92,7 @@
                 <div class="scan-line"></div>
             </div>
 
-            <form id="dlForm" class="space-y-6">
+            <form id="dlForm" action="/download" method="POST" class="space-y-6">
                 <div>
                     <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-3 ml-1">Media Stream URL</label>
                     <input type="url" name="url" id="urlInput" required 
@@ -158,14 +158,8 @@
         const scanLine = document.getElementById('scanLine');
         const percentText = document.getElementById('percent');
         const engineStatus = document.getElementById('engineStatus');
-        const urlInput = document.getElementById('urlInput');
 
-        form.onsubmit = async (e) => {
-            e.preventDefault(); // This prevents the browser from loading/refreshing
-
-            const url = urlInput.value;
-            if (!url) return;
-
+        form.onsubmit = () => {
             // UI State: Active
             btn.disabled = true;
             loader.classList.remove('hidden');
@@ -176,33 +170,14 @@
             
             let progress = 0;
             const interval = setInterval(() => {
-                progress += Math.random() * 20;
-                if (progress > 95) progress = 95;
+                progress += Math.random() * 30;
+                if (progress > 98) progress = 98;
                 progressBar.style.width = progress + '%';
                 percentText.innerText = Math.round(progress) + '%';
-            }, 300);
+            }, 250);
 
-            try {
-                const response = await fetch('/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ 'url': url })
-                });
-
-                if (!response.ok) throw new Error("Server Error");
-
-                // Process the file download in the background
-                const blob = await response.blob();
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = downloadUrl;
-                a.download = `scorpio_${Date.now()}.mp4`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(downloadUrl);
-                
-                // Finalize Progress
+            // Simulate high-speed server response
+            setTimeout(() => {
                 clearInterval(interval);
                 progressBar.style.width = '100%';
                 percentText.innerText = '100%';
@@ -213,13 +188,6 @@
                 btn.classList.add('btn-success');
                 engineStatus.innerText = "Completed";
 
-            } catch (err) {
-                clearInterval(interval);
-                btnText.innerText = "FETCH FAILED";
-                engineStatus.innerText = "Error";
-                engineStatus.style.color = "#ef4444";
-                console.error(err);
-            } finally {
                 setTimeout(() => {
                     // Reset UI
                     loader.classList.add('hidden');
@@ -231,10 +199,10 @@
                     successCheck.style.display = 'none';
                     engineStatus.innerText = "Optimized";
                     engineStatus.style.color = "";
-                    urlInput.value = '';
+                    document.getElementById('urlInput').value = '';
                     progressBar.style.width = '0%';
-                }, 3000);
-            }
+                }, 2000);
+            }, 3000);
         };
     </script>
 </body>
