@@ -10,13 +10,13 @@ import httpx
 # -----------------------------
 # Configuration & Environment
 # -----------------------------
-IS_RENDER = "RENDER" in os.environ
 PORT = int(os.environ.get("PORT", 5000))
-# Localhost ping for internal stay-awake logic
-SELF_URL = f"http://127.0.0.1:{PORT}/health" 
+# Your specific Render URL to prevent idling
+PUBLIC_URL = "https://scorpioigvideos-downloader-hx7i.onrender.com/health"
 CHUNK_SIZE = 1 * 1024 * 1024  # 1 MB
 COOKIE_FILE = "instagram_cookies.txt"
 
+# Handle Cookies from Environment
 COOKIES_CONTENT = os.environ.get("COOKIES_CONTENT")
 if COOKIES_CONTENT:
     with open(COOKIE_FILE, "w") as f:
@@ -33,26 +33,28 @@ logging.basicConfig(
 logger = logging.getLogger("Scorpio-DL")
 
 # -----------------------------
-# Anti-Sleep Engine (5 Min Ping)
+# Anti-Sleep Engine (External Ping)
 # -----------------------------
 async def keep_alive():
-    """Background task to ping the server every 5 minutes to prevent Render sleep."""
-    await asyncio.sleep(10) # Initial boot delay
-    async with httpx.AsyncClient() as client:
+    """Background task to ping the public URL every 10 minutes."""
+    await asyncio.sleep(20) # Initial boot delay
+    logger.info(f"🚀 Anti-Sleep Engine targeting: {PUBLIC_URL}")
+    
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         while True:
             try:
-                response = await client.get(SELF_URL)
-                # Success log
-                logger.info(f"❤️ SYSTEM HEARTBEAT: [Status {response.status_code}] Engine Active")
+                # Pinging the PUBLIC URL tells Render the service is in use
+                response = await client.get(PUBLIC_URL, timeout=30.0)
+                logger.info(f"❤️ HEARTBEAT SUCCESS: [Status {response.status_code}] Engine Active")
             except Exception as e:
-                logger.warning(f"💔 HEARTBEAT INTERRUPTION: {e}")
+                logger.warning(f"💔 HEARTBEAT DELAYED: {e}")
             
-            # 300 seconds = 5 minutes
-            await asyncio.sleep(300) 
+            # Ping every 10 minutes (600 seconds)
+            # Render sleeps after 15 mins of inactivity
+            await asyncio.sleep(600) 
 
 @app.before_serving
 async def startup_tasks():
-    # Launches the keep_alive loop in the background on startup
     app.add_background_task(keep_alive)
 
 # -----------------------------
@@ -60,8 +62,8 @@ async def startup_tasks():
 # -----------------------------
 @app.route("/health")
 async def health():
-    """Silent endpoint for keep-alive pings."""
-    return {"status": "optimized", "engine": "scorpio-v2.5"}, 200
+    """Endpoint for keep-alive pings."""
+    return {"status": "optimized", "engine": "scorpio-v2.5", "state": "online"}, 200
 
 @app.route("/")
 async def index():
@@ -76,7 +78,7 @@ async def extract_instagram_info(url: str) -> dict:
         "quiet": True,
         "no_warnings": True,
         "cookiefile": COOKIE_FILE if os.path.exists(COOKIE_FILE) else None,
-        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     }
 
     def extract():
@@ -87,10 +89,15 @@ async def extract_instagram_info(url: str) -> dict:
             return info
 
     info = await asyncio.to_thread(extract)
+    
+    # Clean filename
+    raw_title = info.get('title', 'scorpio_video')
+    clean_filename = "".join([c for c in raw_title if c.isalnum() or c in (' ', '_')]).strip()
+    
     return {
         "video_url": info["url"],
         "headers": info.get("http_headers", {}),
-        "filename": quote(f"{info.get('title', 'scorpio_video')}.mp4")
+        "filename": quote(f"{clean_filename}.mp4")
     }
 
 async def range_stream(video_url: str, base_headers: dict):
@@ -119,7 +126,7 @@ async def range_stream(video_url: str, base_headers: dict):
 
             if total_size and end >= total_size - 1: break
             start = end + 1
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.01) # Yield to event loop
 
 @app.route("/download", methods=["POST"])
 async def download():
@@ -141,8 +148,8 @@ async def download():
         return f"❌ Scorpio Error: {str(e)}", 500
 
 # -----------------------------
-# Local Execution
+# Deployment Setup
 # -----------------------------
 if __name__ == "__main__":
-    logger.info("--- SCORPIO LOCAL DEV MODE ---")
-    app.run(host="0.0.0.0", port=PORT, debug=True, use_reloader=True)
+    # Local development run
+    app.run(host="0.0.0.0", port=PORT, debug=True)
