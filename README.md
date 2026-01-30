@@ -1,50 +1,60 @@
 # 🦂 SCORPIO | High-Performance IG Extraction Engine
+![System Version](https://img.shields.io/badge/System-v2.5_Online-indigo?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-emerald?style=for-the-badge)
+![Engine](https://img.shields.io/badge/Engine-CORE--V2-blue?style=for-the-badge)
 
-**Scorpio** is a professional-grade Instagram video extraction tool built on the **Quart** (Asynchronous Flask) framework and powered by **yt-dlp**. It features a high-end "Cyber-Ops" aesthetic, glassmorphic UI, and a resilient backend designed for high-concurrency cloud deployment.
+**Scorpio** is a professional-grade, asynchronous Instagram media extraction tool. Built with a cyber-ops aesthetic, it utilizes a **Quart** backend and **yt-dlp** to deliver original-source media streams directly to the user with zero server-side storage overhead.
 
----
 
-## ⚡ Core Features
-* **Asynchronous Streaming:** Leverages `Quart` and `httpx` for non-blocking, chunked video delivery (1MB fragments) to maximize download speeds and minimize server RAM usage.
-* **Anti-Sleep Engine:** Integrated background heartbeat task that pings the system every 10 minutes to prevent Render/Cloud idling (15-min sleep cycles).
-* **Recalibration UI:** A futuristic glassmorphic interface featuring a **3-second "System Shake"** recalibration effect triggered on every page load/refresh.
-* **Session Persistence:** Supports `instagram_cookies.txt` via environment variables to bypass rate limits and private content restrictions.
-* **Auto-Reset Logic:** A strict **6-second hard-reload cycle** triggered immediately upon user interaction, ensuring the engine resets to an "Optimized" state after every fetch.
 
 ---
 
-## 🛠️ Technical Stack
-* **Backend:** Python 3.10+ (`Quart`, `yt-dlp`, `httpx`)
-* **Frontend:** Tailwind CSS, Plus Jakarta Sans, Vanilla JS
-* **Deployment:** Optimized for Render, Fly.io, or VPS
+## ⚡ Core Specifications
+
+| Feature | Specification |
+| :--- | :--- |
+| **Backend Architecture** | Asynchronous Python (Quart) |
+| **Stream Logic** | 1MB Fragmented Chunking (`httpx`) |
+| **UI Framework** | Tailwind CSS + Glassmorphism v3 |
+| **Extraction Engine** | `yt-dlp` Core-V2 Optimized |
+| **Stability** | Integrated Anti-Sleep Heartbeat Engine |
 
 ---
 
-## 🚀 Deployment Guide
+## 💎 Exclusive Features
 
-### 1. Environment Variables
-To keep your instance active and authenticated, set the following in your hosting dashboard:
+### 🛠️ Anti-Sleep Heartbeat
+Designed for **Render** and **Heroku** deployments. Scorpio includes a background task that pings its own `/health` endpoint every 10 minutes, preventing the 15-minute inactivity "idle sleep" common in free-tier hosting.
 
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `PORT` | The port the server binds to | `5000` |
-| `COOKIES_CONTENT` | The raw text content of your exported Netscape cookies | `None` |
-| `PUBLIC_URL` | Your live deployment URL (required for Heartbeat engine) | `https://your-app.onrender.com/health` |
+### 🧬 Recalibration UI
+On every system load or refresh, the interface performs a **3-second System Shake**. This visual cue confirms the engine is recalibrating its gateway and clearing the pipeline for a fresh extraction.
 
-### 2. Cookie Configuration
-Scorpio requires Instagram cookies to maintain high-fidelity extraction rates.
-1. Export your cookies from your browser in **Netscape** format.
-2. Paste the raw content into the `COOKIES_CONTENT` environment variable in your host settings.
-3. The engine will automatically generate the `instagram_cookies.txt` file on boot.
+### ⏱️ 6-Second Auto-Reset
+To ensure maximum reliability during batch extraction, the system locks the UI upon click and triggers a hard-reload exactly **6 seconds** later. This keeps the extraction engine "Optimized" and prevents memory leaks from stalled stream requests.
 
-### 3. Local Installation
+---
+
+## 🚀 Rapid Deployment
+
+### 1. Configure Environment
+Set these variables in your deployment dashboard (Render/Fly.io/Heroku):
+
+* `COOKIES_CONTENT`: Paste the raw text from your exported Netscape cookies file.
+* `PUBLIC_URL`: Your live app URL (e.g., `https://scorpio.onrender.com/health`).
+* `PORT`: `5000`
+
+### 2. Local Installation
+Copy and execute the following commands in your terminal:
+
 ```bash
 # Clone the repository
 git clone [https://github.com/Motari2004/igdown](https://github.com/Motari2004/igdown)
+
+# Enter the system directory
 cd igdown
 
-# Install dependencies
+# Install the extraction stack
 pip install quart yt-dlp httpx
 
-# Launch the engine
+# Boot the engine
 python app.py
