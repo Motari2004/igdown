@@ -1,64 +1,106 @@
+from quart import Quart, render_template, request, Response
+import yt_dlp
+import httpx
+import asyncio
+import logging
 import os
-import subprocess
-import uvicorn
-from fastapi import FastAPI, Form, Request, HTTPException
-from fastapi.responses import RedirectResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
+from urllib.parse import quote
 
-app = FastAPI(title="TurboStream Pro")
-templates = Jinja2Templates(directory="templates")
+# -----------------------------
+# Configuration
+# -----------------------------
+# Render provides the PORT environment variable automatically
+PORT = int(os.environ.get("PORT", 5000))
+CHUNK_SIZE = 1 * 1024 * 1024  # 1 MB
+COOKIE_FILE = "instagram_cookies.txt" 
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+app = Quart(__name__)
 
-@app.post("/download")
-async def download(url: str = Form(...)):
-    if not url.strip():
-        raise HTTPException(status_code=400, detail="URL cannot be empty")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger("IG-Streamer")
 
-    format_selector = "best[ext=mp4]/best"
+# -----------------------------
+# yt-dlp extractor
+# -----------------------------
+async def extract_instagram_info(url: str) -> dict:
+    ydl_opts = {
+        "format": "best",
+        "quiet": True,
+        "no_warnings": True,
+    }
     
-    # We use 'ios' first as it is currently the most resilient to 'Sign-in' blocks
-    # 'android_test' is a hidden client that sometimes bypasses IP bans
-    extractor_args = "youtube:player_client=ios,android_test,web_embedded;player_skip=configs,js"
+    # Check if cookie file exists before passing it
+    if os.path.exists(COOKIE_FILE):
+        ydl_opts["cookiefile"] = COOKIE_FILE
 
-    command = [
-        "yt-dlp",
-        "--quiet",
-        "--no-warnings",
-        "--no-check-certificate",
-        "--extractor-args", extractor_args,
-        "--force-ipv4", # Render uses IPv6 often, which YouTube flags faster
-        "-f", format_selector,
-        "--get-url",
-        url
-    ]
+    def extract():
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            if not info or "url" not in info:
+                raise ValueError("Unable to extract video URL")
+            return info
+
+    info = await asyncio.to_thread(extract)
+
+    return {
+        "video_url": info["url"],
+        "headers": info.get("http_headers", {}),
+        "filename": quote(f"{info.get('title', 'instagram_video')}.mp4")
+    }
+
+# -----------------------------
+# RANGE STREAMER
+# -----------------------------
+async def range_stream(video_url: str, base_headers: dict):
+    timeout = httpx.Timeout(connect=20.0, read=300.0, write=20.0, pool=20.0)
+    limits = httpx.Limits(max_connections=5, max_keepalive_connections=5)
+
+    async with httpx.AsyncClient(timeout=timeout, limits=limits, follow_redirects=True) as client:
+        head = await client.head(video_url, headers=base_headers)
+        total_size = int(head.headers.get("Content-Length", 0))
+        start = 0
+
+        while start < total_size:
+            end = min(start + CHUNK_SIZE - 1, total_size - 1)
+            headers = {**base_headers, "Range": f"bytes={start}-{end}"}
+
+            async with client.stream("GET", video_url, headers=headers) as r:
+                r.raise_for_status()
+                async for chunk in r.aiter_bytes():
+                    yield chunk
+
+            start = end + 1
+            await asyncio.sleep(0)
+
+# -----------------------------
+# Routes
+# -----------------------------
+@app.route("/")
+async def index():
+    return "IG Streamer is Running!" # Or render_template("index.html")
+
+@app.route("/download", methods=["POST"])
+async def download():
+    form = await request.form
+    url = form.get("url")
+
+    if not url:
+        return "❌ No URL provided", 400
 
     try:
-        # Attempt extraction
-        result = subprocess.run(command, capture_output=True, text=True, timeout=40)
-        
-        if result.returncode != 0:
-            # Fallback to the 'tv' client if mobile fails
-            fallback_command = [
-                "yt-dlp", "--quiet", "-f", "best", "--get-url",
-                "--extractor-args", "youtube:player_client=tv", url
-            ]
-            result = subprocess.run(fallback_command, capture_output=True, text=True, timeout=40)
-            
-            if result.returncode != 0:
-                # If everything fails, it's a hard IP ban from YouTube
-                print(f"Banned Error: {result.stderr}")
-                raise Exception("YouTube is blocking this server. Try again in a few minutes.")
-
-        direct_url = result.stdout.strip()
-        return RedirectResponse(url=direct_url)
-
+        info = await extract_instagram_info(url)
+        return Response(
+            range_stream(info["video_url"], info["headers"]),
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{info['filename']}",
+                "Content-Type": "video/mp4",
+                "Accept-Ranges": "bytes",
+                "X-Content-Type-Options": "nosniff",
+            }
+        )
     except Exception as e:
-        print(f"Detailed Log: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+        logger.exception("Download error")
+        return f"❌ Error: {str(e)}", 500

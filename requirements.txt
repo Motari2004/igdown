@@ -1,5 +1,4 @@
-fastapi
-uvicorn[standard]
+quart
 yt-dlp
-jinja2
-python-multipart
+httpx
+hypercorn
