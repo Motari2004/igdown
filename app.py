@@ -3,7 +3,6 @@ import asyncio
 import logging
 import sys
 from urllib.parse import quote
-
 from quart import Quart, render_template, request, Response
 import yt_dlp
 import httpx
