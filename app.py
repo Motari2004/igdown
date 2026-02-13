@@ -12,7 +12,7 @@ import httpx
 # -----------------------------
 PORT = int(os.environ.get("PORT", 5000))
 # Your specific Render URL to prevent idling
-PUBLIC_URL = "https://scorpioigvideos-downloader-hx7i.onrender.com/health"
+PUBLIC_URL = "https://igdown-01en.onrender.com/health"
 CHUNK_SIZE = 1 * 1024 * 1024  # 1 MB
 COOKIE_FILE = "instagram_cookies.txt"
 
